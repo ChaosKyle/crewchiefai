@@ -1,23 +1,43 @@
 import requests
 import csv
 import os
+import hashlib
+import base64
 from datetime import datetime
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
-def fetch_iracing_data(api_key, output_folder):
-    """Fetch all available historical iRacing data using the API and save it as CSV."""
-    url = "https://members-ng.iracing.com/data/telemetry/all"  # Updated endpoint to fetch all data
-    headers = {"Authorization": f"Bearer {api_key}"}
+def authenticate_iracing(email, password):
+    """Authenticate with the iRacing API using Base64 encoded SHA256 hash."""
+    email_lower = email.lower()
+    hash_value = hashlib.sha256((password + email_lower).encode('utf-8')).digest()
+    encoded_password = base64.b64encode(hash_value).decode('utf-8')
 
-    response = requests.get(url, headers=headers)
+    login_url = "https://members-ng.iracing.com/auth"
+    payload = {"email": email, "password": encoded_password}
+    headers = {'Content-Type': 'application/json'}
+
+    session = requests.Session()
+    response = session.post(login_url, json=payload, headers=headers)
+
+    if response.status_code == 200:
+        print("Authentication successful")
+        return session
+    else:
+        print(f"Failed to authenticate: {response.status_code} - {response.text}")
+        return None
+
+def fetch_iracing_data(session, output_folder):
+    """Fetch all available historical iRacing data using the API and save it as CSV."""
+    url = "https://members-ng.iracing.com/data/telemetry/all"
+    response = session.get(url)
+
     if response.status_code == 200:
         data = response.json()
         file_path = save_to_csv(data, output_folder)
         upload_to_google_drive(file_path)
     else:
         print(f"Failed to fetch data: {response.status_code} - {response.text}")
-
 
 def save_to_csv(data, output_folder):
     """Save all iRacing telemetry data to a CSV file in the specified folder."""
@@ -39,11 +59,10 @@ def save_to_csv(data, output_folder):
     print(f"All telemetry data saved to {file_path}")
     return file_path
 
-
 def upload_to_google_drive(file_path):
     """Upload the CSV file to Google Drive."""
     gauth = GoogleAuth()
-    gauth.LocalWebserverAuth()  # Authenticate via browser
+    gauth.LocalWebserverAuth()
     drive = GoogleDrive(gauth)
 
     file = drive.CreateFile({'title': os.path.basename(file_path)})
@@ -51,12 +70,14 @@ def upload_to_google_drive(file_path):
     file.Upload()
     print(f"File uploaded to Google Drive: {file['title']}")
 
-
 if __name__ == "__main__":
-    API_KEY = os.getenv("IRACING_API_KEY")  # Use environment variable for security
+    EMAIL = os.getenv("IRACING_EMAIL")
+    PASSWORD = os.getenv("IRACING_PASSWORD")
     OUTPUT_FOLDER = "./iracing_data"
 
-    if API_KEY:
-        fetch_iracing_data(API_KEY, OUTPUT_FOLDER)
+    if EMAIL and PASSWORD:
+        session = authenticate_iracing(EMAIL, PASSWORD)
+        if session:
+            fetch_iracing_data(session, OUTPUT_FOLDER)
     else:
-        print("Please set the IRACING_API_KEY environment variable.")
+        print("Please set the IRACING_EMAIL and IRACING_PASSWORD environment variables.")
