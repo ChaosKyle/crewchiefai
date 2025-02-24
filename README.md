@@ -1,5 +1,50 @@
 # CrewChief_AI iRacing AI Crew Chief - Open Source Project
 
+Pulling data
+# iRacing Data Export Script
+
+This script pulls historical telemetry data from the iRacing API, saves it as a CSV file, and uploads the file to Google Drive. It uses Base64 encoded SHA256 hashing for authentication, as per iRacing's latest requirements.
+
+## Prerequisites
+- Python 3.8 or later
+- Required libraries: `requests`, `pydrive`, `hashlib`, `base64`
+- Google Drive API credentials configured for `pydrive`
+
+## Installation
+```bash
+pip install requests pydrive
+```
+
+## Setup
+1. **Environment Variables:** Set the following environment variables:
+```bash
+export IRACING_EMAIL="your_email@example.com"
+export IRACING_PASSWORD="your_password"
+```
+2. **Google Drive Authentication:**
+   - Ensure you have a `client_secrets.json` file from your Google API Console.
+   - The first time you run the script, a browser window will open to authenticate your Google Drive.
+
+## Usage
+```bash
+python iracing_data_export.py
+```
+
+## Output
+- Data is saved locally in the `./iracing_data` directory with a timestamp.
+- A copy is uploaded to your Google Drive.
+
+## Next Steps
+After exporting your data, you can configure Grafana Alloy to ingest the CSV files from Google Drive and push the data to Grafana Cloud or a local deployment.
+
+
+
+
+
+
+
+
+
 ## Overview
 This project uses Grafana's open-source tools (Alloy, Mimir, Loki, Tempo, and Grafana) to provide real-time telemetry feedback and after-race analysis for iRacing. It includes AI agents that act as a virtual race team to help improve performance. Deployment starts with **local Kubernetes** and will expand to **cloud providers** and **Grafana Cloud** in future versions.
 
